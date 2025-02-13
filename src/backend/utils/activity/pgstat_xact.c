@@ -32,7 +32,6 @@ static void AtEOSubXact_PgStat_DroppedStats(PgStat_SubXactStatus *xact_state,
 
 static PgStat_SubXactStatus *pgStatXactStack = NULL;
 
-
 /*
  * Called from access/transam/xact.c at top-level transaction commit/abort.
  */

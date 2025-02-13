@@ -29,12 +29,14 @@ PgStat_Counter pgStatBlockReadTime = 0;
 PgStat_Counter pgStatBlockWriteTime = 0;
 PgStat_Counter pgStatActiveTime = 0;
 PgStat_Counter pgStatTransactionIdleTime = 0;
+PgStat_Counter pgStatCommitTime = 0;
 SessionEndType pgStatSessionEndCause = DISCONNECT_NORMAL;
 
 
 static int	pgStatXactCommit = 0;
 static int	pgStatXactRollback = 0;
 static PgStat_Counter pgLastSessionReportTime = 0;
+static TimestampTz pgLastStartCommitTime = 0;
 
 
 /*
@@ -245,9 +247,18 @@ pgstat_fetch_stat_dbentry(Oid dboid)
 		pgstat_fetch_entry(PGSTAT_KIND_DATABASE, dboid, InvalidOid);
 }
 
+void PreCommit_PgStat_Database(bool isCommit)
+{
+	if(isCommit)
+		pgLastStartCommitTime = GetCurrentTimestamp();
+}
+
 void
 AtEOXact_PgStat_Database(bool isCommit, bool parallel)
 {
+	PgStat_Counter now;
+	long		commit_time_ms;
+
 	/* Don't count parallel worker transaction stats */
 	if (!parallel)
 	{
@@ -256,7 +267,13 @@ AtEOXact_PgStat_Database(bool isCommit, bool parallel)
 		 * bools, in case the reporting message isn't sent right away.)
 		 */
 		if (isCommit)
+		{
 			pgStatXactCommit++;
+			now = GetCurrentTimestamp();
+
+			commit_time_ms = TimestampDifferenceMilliseconds(pgLastStartCommitTime, now);
+			pgstat_count_commit_time((PgStat_Counter) commit_time_ms);
+		}
 		else
 			pgStatXactRollback++;
 	}
@@ -320,6 +337,7 @@ pgstat_update_dbstats(TimestampTz ts)
 		dbentry->session_time += (PgStat_Counter) secs * 1000000 + usecs;
 		dbentry->active_time += pgStatActiveTime;
 		dbentry->idle_in_transaction_time += pgStatTransactionIdleTime;
+		dbentry->commit_time += pgStatCommitTime;
 	}
 
 	pgStatXactCommit = 0;
@@ -328,6 +346,7 @@ pgstat_update_dbstats(TimestampTz ts)
 	pgStatBlockWriteTime = 0;
 	pgStatActiveTime = 0;
 	pgStatTransactionIdleTime = 0;
+	pgStatCommitTime = 0;
 }
 
 /*
@@ -439,6 +458,7 @@ pgstat_database_flush_cb(PgStat_EntryRef *entry_ref, bool nowait)
 	PGSTAT_ACCUM_DBCOUNT(session_time);
 	PGSTAT_ACCUM_DBCOUNT(active_time);
 	PGSTAT_ACCUM_DBCOUNT(idle_in_transaction_time);
+	PGSTAT_ACCUM_DBCOUNT(commit_time);
 	PGSTAT_ACCUM_DBCOUNT(sessions_abandoned);
 	PGSTAT_ACCUM_DBCOUNT(sessions_fatal);
 	PGSTAT_ACCUM_DBCOUNT(sessions_killed);
