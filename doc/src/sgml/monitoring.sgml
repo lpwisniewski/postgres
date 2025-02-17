@@ -3657,6 +3657,15 @@ description | Waiting for a newly initialized WAL file to reach durable storage
 
      <row>
       <entry role="catalog_table_entry"><para role="column_definition">
+       <structfield>commit_time</structfield> <type>bigint</type>
+      </para>
+      <para>
+       Time spent committing transactions in this database
+      </para></entry>
+     </row>
+
+     <row>
+      <entry role="catalog_table_entry"><para role="column_definition">
        <structfield>stats_reset</structfield> <type>timestamp with time zone</type>
       </para>
       <para>

@@ -1503,6 +1503,8 @@ FinishPreparedTransaction(const char *gid, bool isCommit)
 	xl_xact_stats_item *abortstats;
 	SharedInvalidationMessage *invalmsgs;
 
+	PreCommit_PgStat_Database(isCommit);
+
 	/*
 	 * Validate the GID, and lock the GXACT to ensure that two backends do not
 	 * try to commit the same GID at once.

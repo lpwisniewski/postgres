@@ -2269,6 +2269,7 @@ CommitTransaction(void)
 			break;
 	}
 
+	PreCommit_PgStat_Database(true);
 	/*
 	 * The remaining actions cannot call any user-defined code, so it's safe
 	 * to start shutting down within-transaction services.  But note that most
